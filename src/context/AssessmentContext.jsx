@@ -54,6 +54,62 @@ const initialState = {
         understandsOpposites: { ...initialSkillState },
         singsRhymes: { ...initialSkillState },
     },
+
+    // Screen 5: Communication Skills
+    communication: {
+        initiatesConversation: { ...initialSkillState },
+        maintainsEyeContact: { ...initialSkillState },
+        takesTurns: { ...initialSkillState },
+        asksForHelp: { ...initialSkillState },
+        respondsGreetings: { ...initialSkillState },
+        expressesNeeds: { ...initialSkillState },
+        usesFacialExpressions: { ...initialSkillState },
+        usesGestures: { ...initialSkillState },
+        appropriateTone: { ...initialSkillState },
+        pretendPlaySpeech: { ...initialSkillState },
+    },
+
+    // Screen 6: Social Interaction Skills
+    social: {
+        greetsPeers: { ...initialSkillState },
+        parallelPlay: { ...initialSkillState },
+        sharesMaterials: { ...initialSkillState },
+        takesTurnsGroup: { ...initialSkillState },
+        followsRules: { ...initialSkillState },
+        waitsPatiently: { ...initialSkillState },
+        expressesFeelings: { ...initialSkillState },
+        showsEmpathy: { ...initialSkillState },
+        resolvesConflicts: { ...initialSkillState },
+        joinsGroup: { ...initialSkillState },
+    },
+
+    // Screen 7: Activities of Daily Living (ADL)
+    adl: {
+        toileting: { ...initialSkillState },
+        washesHands: { ...initialSkillState },
+        brushesTeeth: { ...initialSkillState },
+        eatsIndependently: { ...initialSkillState },
+        dresses: { ...initialSkillState },
+        wearsShoes: { ...initialSkillState },
+        zipsBag: { ...initialSkillState },
+        opensLunchbox: { ...initialSkillState },
+        packsBag: { ...initialSkillState },
+        recognizesBelongings: { ...initialSkillState },
+    },
+
+    // Screen 8: Cognitive Skills
+    cognitive: {
+        identifiesNumbers: { ...initialSkillState },
+        countsObjects: { ...initialSkillState },
+        matchesShapes: { ...initialSkillState },
+        recognizesPatterns: { ...initialSkillState },
+        sameVsDifferent: { ...initialSkillState },
+        sortsObjects: { ...initialSkillState },
+        recallsItems: { ...initialSkillState },
+        completesTasks: { ...initialSkillState },
+        timeConcepts: { ...initialSkillState },
+        taskAttention: { ...initialSkillState },
+    },
 };
 
 const assessmentReducer = (state, action) => {

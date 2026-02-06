@@ -85,6 +85,10 @@ const Review = ({ onBack, onJumpToStep }) => {
             {renderSkillSummary('gross', 'Gross Motor Skills')}
             {renderSkillSummary('fine', 'Fine Motor Skills')}
             {renderSkillSummary('language', 'Language Skills')}
+            {renderSkillSummary('communication', 'Communication Skills')}
+            {renderSkillSummary('social', 'Social Interaction Skills')}
+            {renderSkillSummary('adl', 'Activities of Daily Living')}
+            {renderSkillSummary('cognitive', 'Cognitive Skills')}
 
             {error && (
                 <div style={{ padding: '16px', backgroundColor: '#FDECEA', color: 'var(--color-error)', borderRadius: '8px', marginBottom: '24px' }}>

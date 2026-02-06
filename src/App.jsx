@@ -7,7 +7,7 @@ import Review from './screens/Review';
 
 function AppContent() {
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 5;
+  const totalSteps = 9;
 
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, totalSteps));
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
@@ -16,7 +16,11 @@ function AppContent() {
       'info': 1,
       'gross': 2,
       'fine': 3,
-      'language': 4
+      'language': 4,
+      'communication': 5,
+      'social': 6,
+      'adl': 7,
+      'cognitive': 8
     };
     if (typeof stepOrCategory === 'string' && stepMap[stepOrCategory]) {
       setCurrentStep(stepMap[stepOrCategory]);
@@ -36,6 +40,14 @@ function AppContent() {
       case 4:
         return <SkillAssessment category="language" onNext={nextStep} onBack={prevStep} />;
       case 5:
+        return <SkillAssessment category="communication" onNext={nextStep} onBack={prevStep} />;
+      case 6:
+        return <SkillAssessment category="social" onNext={nextStep} onBack={prevStep} />;
+      case 7:
+        return <SkillAssessment category="adl" onNext={nextStep} onBack={prevStep} />;
+      case 8:
+        return <SkillAssessment category="cognitive" onNext={nextStep} onBack={prevStep} />;
+      case 9:
         return <Review onBack={prevStep} onJumpToStep={jumpToStep} />;
       default:
         return <ChildInfo onNext={nextStep} />;

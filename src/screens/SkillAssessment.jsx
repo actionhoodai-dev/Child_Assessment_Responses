@@ -51,6 +51,70 @@ const skillLabels = {
             understandsOpposites: "Understands opposites (big/small, up/down)",
             singsRhymes: "Sings songs or nursery rhymes"
         }
+    },
+    communication: {
+        title: "Communication Skills",
+        description: "Assess non-verbal and early verbal communication.",
+        items: {
+            initiatesConversation: "Initiates conversation",
+            maintainsEyeContact: "Maintains eye contact",
+            takesTurns: "Takes turns in conversation",
+            asksForHelp: "Asks for help when needed",
+            respondsGreetings: "Responds to greetings",
+            expressesNeeds: "Expresses needs clearly",
+            usesFacialExpressions: "Uses appropriate facial expressions",
+            usesGestures: "Uses gestures to communicate",
+            appropriateTone: "Uses appropriate tone of voice",
+            pretendPlaySpeech: "Uses speech during pretend play"
+        }
+    },
+    social: {
+        title: "Social Interaction Skills",
+        description: "Assess social behavior and interaction with others.",
+        items: {
+            greetsPeers: "Greets peers independently",
+            parallelPlay: "Engages in parallel play",
+            sharesMaterials: "Shares materials with others",
+            takesTurnsGroup: "Takes turns in group activities",
+            followsRules: "Follows classroom/group rules",
+            waitsPatiently: "Waits patiently for turn",
+            expressesFeelings: "Expresses feelings appropriately",
+            showsEmpathy: "Shows empathy towards others",
+            resolvesConflicts: "Resolves conflicts with peers",
+            joinsGroup: "Joins group activities willingly"
+        }
+    },
+    adl: {
+        title: "Activities of Daily Living (ADL)",
+        description: "Assess self-care and daily living skills.",
+        items: {
+            toileting: "Manages toileting independently",
+            washesHands: "Washes hands independently",
+            brushesTeeth: "Brushes teeth",
+            eatsIndependently: "Eats independently",
+            dresses: "Dresses self",
+            wearsShoes: "Puts on shoes",
+            zipsBag: "Zips/unzips bag",
+            opensLunchbox: "Opens lunchbox/containers",
+            packsBag: "Packs own bag",
+            recognizesBelongings: "Recognizes personal belongings"
+        }
+    },
+    cognitive: {
+        title: "Cognitive Skills",
+        description: "Assess intellectual development and problem-solving.",
+        items: {
+            identifiesNumbers: "Identifies numbers",
+            countsObjects: "Counts objects accurately",
+            matchesShapes: "Matches shapes",
+            recognizesPatterns: "Recognizes simple patterns",
+            sameVsDifferent: "Understands concept of Same vs Different",
+            sortsObjects: "Sorts objects by category/attribute",
+            recallsItems: "Recalls missing items from a set",
+            completesTasks: "Completes assigned tasks",
+            timeConcepts: "Understands basic time concepts (now, later)",
+            taskAttention: "Sustains attention on task"
+        }
     }
 };
 
