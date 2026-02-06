@@ -1,4 +1,4 @@
-export const API_URL = "https://script.google.com/macros/s/AKfycbznu6wWbtTqlPbBLvF8jBLbA-7aEmVv3fHVDNISl38tKHibVUkGKtwvEEvU2kX0sCHZ7g/exec";
+export const API_URL = "https://script.google.com/macros/s/AKfycbwxIk745m--jLzn7f20ykKqS0OtGjlPQqY0JJyM-0SlJ6IU69kROB0vjo0MaA6cN2m8xw/exec";
 
 /**
  * Submits the assessment data to the backend.
