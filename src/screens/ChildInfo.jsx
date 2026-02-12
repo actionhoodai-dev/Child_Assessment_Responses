@@ -13,42 +13,63 @@ const ChildInfo = ({ onNext }) => {
     const [suggestions, setSuggestions] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
 
+    // Function to find the next sequential OTF ID
+    const generateNextId = (records) => {
+        if (!records || !Array.isArray(records) || records.length === 0) return "OTF100";
+
+        const otfIds = records
+            .map(r => {
+                const rawId = r.patientId || r.patient_id || r["Patient ID"] || r["patientid"] || "";
+                return String(rawId).trim().toUpperCase();
+            })
+            .filter(id => id.startsWith("OTF"))
+            .map(id => {
+                const numPart = id.replace("OTF", "");
+                return parseInt(numPart);
+            })
+            .filter(num => !isNaN(num));
+
+        if (otfIds.length === 0) return "OTF100";
+
+        const maxId = Math.max(...otfIds);
+        const nextNum = Math.max(maxId + 1, 100);
+        return `OTF${nextNum}`;
+    };
+
     useEffect(() => {
         const load = async () => {
             setLoading(true);
-            const data = await fetchAssessments();
-            setAllRecords(data);
+            try {
+                // Force fresh fetch on screen load to avoid duplicate IDs
+                const data = await fetchAssessments(true);
+                setAllRecords(data);
 
-            // Auto-generate ID if it's a new patient and no ID is set yet
-            if (isNewPatient && !state.patientId) {
-                const nextId = generateNextId(data);
-                updateInfo('patientId', nextId);
+                // If starting fresh and no ID is set, generate one
+                if (isNewPatient && !state.patientId) {
+                    const nextId = generateNextId(data);
+                    updateInfo('patientId', nextId);
+                }
+            } catch (err) {
+                console.error("Initialization fetch failed:", err);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
         load();
     }, []);
 
-    const generateNextId = (records) => {
-        const otfIds = records
-            .map(r => String(r.patientId || r.patient_id || ""))
-            .filter(id => id.startsWith("OTF"))
-            .map(id => parseInt(id.replace("OTF", "")))
-            .filter(num => !isNaN(num));
-
-        const maxId = otfIds.length > 0 ? Math.max(...otfIds) : 99;
-        return `OTF${maxId + 1}`;
-    };
-
-    const handlePatientTypeChange = (isNew) => {
+    const handlePatientTypeChange = async (isNew) => {
         setIsNewPatient(isNew);
         if (isNew) {
-            const nextId = generateNextId(allRecords);
+            setLoading(true);
+            const freshData = await fetchAssessments(true);
+            setAllRecords(freshData);
+            const nextId = generateNextId(freshData);
             updateInfo('patientId', nextId);
-            // Don't reset other fields as user might be toggling, 
-            // but usually a new patient starts fresh
+            setLoading(false);
         } else {
-            updateInfo('patientId', ""); // Clear for search
+            updateInfo('patientId', "");
+            setSearchTerm("");
         }
     };
 
@@ -57,17 +78,17 @@ const ChildInfo = ({ onNext }) => {
         setSearchTerm(val);
         if (val.length > 1) {
             const filtered = allRecords.filter(r =>
-                String(r.patientId || r.patient_id || "").toLowerCase().includes(val.toLowerCase()) ||
-                String(r.childName || r.child_name || "").toLowerCase().includes(val.toLowerCase())
+                String(r.patientId || "").toLowerCase().includes(val.toLowerCase()) ||
+                String(r.childName || "").toLowerCase().includes(val.toLowerCase())
             );
-            // Get unique patients by ID
+
+            // Uniquify suggestions by patientId
             const unique = [];
-            const map = new Map();
-            for (const item of filtered) {
-                const id = item.patientId || item.patient_id;
-                if (!map.has(id)) {
-                    map.set(id, true);
-                    unique.push(item);
+            const seen = new Set();
+            for (const record of filtered) {
+                if (record.patientId && !seen.has(record.patientId)) {
+                    seen.add(record.patientId);
+                    unique.push(record);
                 }
             }
             setSuggestions(unique.slice(0, 5));
@@ -77,9 +98,9 @@ const ChildInfo = ({ onNext }) => {
     };
 
     const selectPatient = (patient) => {
-        updateInfo('patientId', patient.patientId || patient.patient_id);
-        updateInfo('childName', patient.childName || patient.child_name);
-        updateInfo('dob', patient.dob || patient.dob_date);
+        updateInfo('patientId', patient.patientId);
+        updateInfo('childName', patient.childName);
+        updateInfo('dob', patient.dob);
         updateInfo('age', patient.age);
         updateInfo('gender', patient.gender);
         setSuggestions([]);
@@ -92,9 +113,27 @@ const ChildInfo = ({ onNext }) => {
 
     const isValid = state.patientId && state.childName && state.dob && state.age && state.gender && state.assessorName;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (isValid) onNext();
+        if (!isValid) return;
+
+        // Final verification for New Patient IDs
+        if (isNewPatient) {
+            setLoading(true);
+            const freshData = await fetchAssessments(true);
+            const idExists = freshData.some(r => r.patientId === state.patientId);
+
+            if (idExists) {
+                const trulyNextId = generateNextId(freshData);
+                updateInfo('patientId', trulyNextId);
+                alert(`Note: ID ${state.patientId} was recently taken. We have updated it to ${trulyNextId}. Please proceed.`);
+                setLoading(false);
+                return;
+            }
+            setLoading(false);
+        }
+
+        onNext();
     };
 
     return (
@@ -183,7 +222,7 @@ const ChildInfo = ({ onNext }) => {
                                     onMouseOver={(e) => e.target.style.backgroundColor = '#f8f9fa'}
                                     onMouseOut={(e) => e.target.style.backgroundColor = 'white'}
                                 >
-                                    <strong>{p.patientId || p.patient_id}</strong> - {p.childName || p.child_name}
+                                    <strong>{p.patientId}</strong> - {p.childName}
                                 </div>
                             ))}
                         </div>
@@ -197,7 +236,7 @@ const ChildInfo = ({ onNext }) => {
                     name="patientId"
                     value={state.patientId}
                     onChange={handleChange}
-                    readOnly={isNewPatient} // IDs are managed by system for professionalism
+                    readOnly={isNewPatient}
                     style={{ backgroundColor: isNewPatient ? '#f8f9fa' : 'white' }}
                 />
                 <Input
@@ -276,7 +315,7 @@ const ChildInfo = ({ onNext }) => {
 
             <div style={{ marginTop: '32px' }}>
                 <Button type="submit" disabled={!isValid || loading}>
-                    {loading ? 'Validating ID...' : 'Next: Gross Motor Skills'}
+                    {loading ? 'Processing...' : 'Next: Gross Motor Skills'}
                 </Button>
             </div>
         </form>
