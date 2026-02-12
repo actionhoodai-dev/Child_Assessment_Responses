@@ -20,10 +20,13 @@ const PatientDashboard = ({ onBack }) => {
     }, []);
 
     const handleSearch = () => {
-        const filtered = allRecords.filter(r =>
-            String(r.patientId).toLowerCase() === searchId.toLowerCase() ||
-            String(r.patient_id).toLowerCase() === searchId.toLowerCase()
-        );
+        const query = searchId.toLowerCase();
+        const filtered = allRecords.filter(r => {
+            const pId = String(r.patientId || r.patient_id || "").toLowerCase();
+            const pName = String(r.childName || r.child_name || "").toLowerCase();
+            return pId === query || pName.includes(query);
+        });
+
         // Sort by date descending
         const sorted = filtered.sort((a, b) => new Date(b.assessmentDate || b.assessment_date) - new Date(a.assessmentDate || a.assessment_date));
         setSelectedPatientRecords(sorted);
@@ -95,7 +98,7 @@ const PatientDashboard = ({ onBack }) => {
             <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
                 <input
                     type="text"
-                    placeholder="Enter Patient ID (e.g. P123)"
+                    placeholder="Search by Patient ID (e.g. OTF100) or Name"
                     value={searchId}
                     onChange={(e) => setSearchId(e.target.value)}
                     style={{
