@@ -34,7 +34,6 @@ const PatientDashboard = ({ onBack }) => {
             return pId === q || pName.includes(q);
         });
 
-        // Sort by date descending (latest first)
         const sorted = [...filtered].sort((a, b) =>
             new Date(b.assessmentDate) - new Date(a.assessmentDate)
         );
@@ -50,34 +49,37 @@ const PatientDashboard = ({ onBack }) => {
             let totalYes = 0;
             let totalQuestions = 0;
 
+            // 1. Try nested structure (standard app state)
             categories.forEach(cat => {
-                const categoryData = record[cat] || {};
-
-                // If the data is nested { walksIndependently: { value: "Yes" } }
-                if (typeof categoryData === 'object' && !Array.isArray(categoryData)) {
+                const categoryData = record[cat];
+                if (categoryData && typeof categoryData === 'object' && !Array.isArray(categoryData) && Object.keys(categoryData).length > 0) {
                     Object.values(categoryData).forEach(skill => {
-                        if (skill && (skill.value === 'Yes' || skill === 'Yes')) totalYes++;
-                        totalQuestions++;
+                        const val = (typeof skill === 'object' && skill !== null) ? skill.value : skill;
+                        if (val === 'Yes') totalYes++;
+                        if (val === 'Yes' || val === 'No' || val === 'Sometimes') totalQuestions++;
                     });
-                }
-
-                // Handle flat data which might be directly in the record object
-                // This is a safety net for unpredictable GAS transformations
-                if (totalQuestions === 0) {
-                    // If nested scan failed, maybe it's flat. 
-                    // We don't have the full key list here easily, so we rely on the nested structure 
-                    // produced by normalizeRecord in api.js
                 }
             });
 
-            // Fallback for flat structure if normalization wasn't perfect
+            // 2. Try flat structure (direct from Sheet headers like Gross_Walks_In)
             if (totalQuestions === 0) {
-                // Secondary scan for keys that look like skill answers (e.g. they contain 'Yes' or 'No')
                 Object.entries(record).forEach(([key, value]) => {
-                    if (value === 'Yes' || value === 'No' || value === 'Sometimes') {
+                    const k = key.toLowerCase();
+                    // Match any key that starts with a category name followed by an underscore
+                    const isSkillKey = categories.some(cat => k.startsWith(cat + '_'));
+
+                    if (isSkillKey) {
                         if (value === 'Yes') totalYes++;
-                        totalQuestions++;
+                        if (value === 'Yes' || value === 'No' || value === 'Sometimes') totalQuestions++;
                     }
+                });
+            }
+
+            // 3. Last fallback: scan everything for Yes/No if still 0 (very loose)
+            if (totalQuestions === 0) {
+                Object.entries(record).forEach(([key, value]) => {
+                    if (value === 'Yes') totalYes++;
+                    if (value === 'Yes' || value === 'No') totalQuestions++;
                 });
             }
 
@@ -88,7 +90,7 @@ const PatientDashboard = ({ onBack }) => {
                 totalQuestions,
                 assessor: record.assessorName
             };
-        }).reverse(); // Chronological for visual trend
+        }).reverse();
     };
 
     const stats = useMemo(() => calculateStats(selectedPatientRecords), [selectedPatientRecords]);
@@ -115,7 +117,7 @@ const PatientDashboard = ({ onBack }) => {
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `OTF_Analytics_${selectedPatientRecords[0].childName.replace(/\s/g, '_')}.csv`);
+        link.setAttribute("download", `OTF_Analytics_${(selectedPatientRecords[0].childName || "Patient").replace(/\s/g, '_')}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -159,7 +161,6 @@ const PatientDashboard = ({ onBack }) => {
 
             {selectedPatientRecords.length > 0 ? (
                 <div className="analytics-view">
-                    {/* Header Card */}
                     <div style={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -179,7 +180,6 @@ const PatientDashboard = ({ onBack }) => {
                         <Button variant="secondary" onClick={downloadCSV}>Export Clinical Data (CSV)</Button>
                     </div>
 
-                    {/* Stats Summary Cards */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '40px' }}>
                         <div style={{ backgroundColor: '#e3f2fd', padding: '24px', borderRadius: '12px', borderLeft: '6px solid #2196f3' }}>
                             <span style={{ fontSize: '14px', color: '#1976d2', fontWeight: 'bold', textTransform: 'uppercase' }}>Current Level</span>
@@ -207,7 +207,6 @@ const PatientDashboard = ({ onBack }) => {
                         </div>
                     </div>
 
-                    {/* Progress Chart */}
                     <div style={{
                         backgroundColor: '#fff',
                         padding: '32px',
@@ -264,14 +263,13 @@ const PatientDashboard = ({ onBack }) => {
                                         color: '#666',
                                         lineHeight: '1.2'
                                     }}>
-                                        {new Date(s.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}
+                                        {s.date ? new Date(s.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' }) : 'Unknown'}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Detailed Records Table */}
                     <div style={{
                         backgroundColor: '#fff',
                         borderRadius: '16px',
@@ -292,7 +290,6 @@ const PatientDashboard = ({ onBack }) => {
                                     const sArray = calculateStats([r]);
                                     const s = sArray[0];
 
-                                    // Compare with the one BEFORE it in chron order (which is NEXT in i for sorted descending)
                                     const nextIdx = i + 1;
                                     const prevRecord = nextIdx < selectedPatientRecords.length ? selectedPatientRecords[nextIdx] : null;
                                     const prevS = prevRecord ? calculateStats([prevRecord])[0] : null;
@@ -300,7 +297,7 @@ const PatientDashboard = ({ onBack }) => {
 
                                     return (
                                         <tr key={i} style={{ borderBottom: '1px solid #f0f0f0', transition: 'background 0.2s' }}>
-                                            <td style={{ padding: '20px', fontWeight: '600' }}>{new Date(r.assessmentDate).toLocaleDateString(undefined, { dateStyle: 'long' })}</td>
+                                            <td style={{ padding: '20px', fontWeight: '600' }}>{r.assessmentDate ? new Date(r.assessmentDate).toLocaleDateString(undefined, { dateStyle: 'long' }) : 'N/A'}</td>
                                             <td style={{ padding: '20px', color: '#666' }}>{r.assessorName}</td>
                                             <td style={{ padding: '20px', textAlign: 'center' }}>
                                                 <span style={{

@@ -1,9 +1,8 @@
-export const API_URL = "https://script.google.com/macros/s/AKfycbznu6wWbtTqlPbBLvF8jBLbA-7aEmVv3fHVDNISl38tKHibVUkGKtwvEEvU2kX0sCHZ7g/exec";
+export const API_URL = "https://script.google.com/macros/s/AKfycbxWTwuz3X4YXvVP1VM3EvEDEKEBX0TRLgGaAz57JES3D274lGFPNHbkkE0Ud3x7EP_OeA/exec";
 
 /**
  * Submits the assessment data to the backend.
  * @param {Object} data - The complete assessment data following the data contract.
- * @returns {Promise<Object>} - The response from the server.
  */
 export const saveAssessment = async (data) => {
     try {
@@ -20,7 +19,7 @@ export const saveAssessment = async (data) => {
         }
 
         const result = await response.json();
-        // Clear cache on new save to ensure next fetch is fresh
+        // Clear cache so the next dashboard view is fresh
         assessmentsCache = null;
         return result;
     } catch (error) {
@@ -31,15 +30,16 @@ export const saveAssessment = async (data) => {
 
 let assessmentsCache = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 5 * 60 * 1000;
 
 /**
- * Normalizes flat data from Google Sheets into the nested structure expected by the app.
+ * Normalizes flat data from Google Sheets into the structure expected by the app.
+ * Mapping headers based on USER screenshot: Patient_ID, Child_Name, Date_of_Assess, etc.
  */
 export const normalizeRecord = (raw) => {
     if (!raw) return null;
 
-    // Support both camelCase and snake_case or Spaced Headers from GAS
+    // Support variations in header naming (user changed to Patient_ID/Child_Name)
     const getVal = (keys) => {
         for (const key of keys) {
             if (raw[key] !== undefined) return raw[key];
@@ -48,34 +48,23 @@ export const normalizeRecord = (raw) => {
     };
 
     const normalized = {
-        patientId: getVal(['patientId', 'patient_id', 'Patient ID', 'patientid']),
-        childName: getVal(['childName', 'child_name', 'Child Name', 'childname']),
-        dob: getVal(['dob', 'dob_date', 'Date of Birth', 'dobdate']),
-        age: getVal(['age', 'Age']),
-        gender: getVal(['gender', 'Gender']),
-        assessmentDate: getVal(['assessmentDate', 'assessment_date', 'Date of Assessment', 'assessmentdate']),
-        assessorName: getVal(['assessorName', 'assessor_name', 'Assessor Name', 'assessorname']),
+        patientId: getVal(['Patient_ID', 'patientId', 'patient_id', 'Patient ID']),
+        childName: getVal(['Child_Name', 'childName', 'child_name', 'Child Name']),
+        dob: getVal(['DOB', 'dob_date', 'Date of Birth']),
+        age: getVal(['Age', 'age']),
+        gender: getVal(['Gender', 'gender']),
+        assessmentDate: getVal(['Date_of_Assess', 'assessmentDate', 'assessment_date']),
+        assessorName: getVal(['Assessor_Name', 'assessorName', 'assessor_name']),
     };
 
-    const categories = ['gross', 'fine', 'language', 'communication', 'social', 'adl', 'cognitive'];
-    categories.forEach(cat => {
-        // If it's already a nested object (e.g. from local state)
-        if (raw[cat] && typeof raw[cat] === 'object' && !Array.isArray(raw[cat])) {
-            normalized[cat] = raw[cat];
-        } else {
-            normalized[cat] = {};
-            // If the data is flat, the skill values are likely in the top-level keys
-            // This will be handled by the screens/dashboard which can check both
-        }
-    });
-
-    return normalized;
+    // Keep the rest of the raw data for category scoring (skills)
+    // We'll merge raw into normalized so that categories/flat keys are accessible
+    return { ...raw, ...normalized };
 };
 
 /**
  * Fetches all assessments from Google Sheets.
  * @param {boolean} forceFresh - If true, bypasses the cache.
- * @returns {Promise<Array>} - List of assessment records.
  */
 export const fetchAssessments = async (forceFresh = false) => {
     const now = Date.now();

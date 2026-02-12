@@ -19,7 +19,8 @@ const ChildInfo = ({ onNext }) => {
 
         const otfIds = records
             .map(r => {
-                const rawId = r.patientId || r.patient_id || r["Patient ID"] || r["patientid"] || "";
+                // Map both internal state and various common Sheet headers
+                const rawId = r.patientId || r.patient_id || r["Patient_ID"] || r["Patient ID"] || "";
                 return String(rawId).trim().toUpperCase();
             })
             .filter(id => id.startsWith("OTF"))
@@ -77,17 +78,20 @@ const ChildInfo = ({ onNext }) => {
         const val = e.target.value;
         setSearchTerm(val);
         if (val.length > 1) {
-            const filtered = allRecords.filter(r =>
-                String(r.patientId || "").toLowerCase().includes(val.toLowerCase()) ||
-                String(r.childName || "").toLowerCase().includes(val.toLowerCase())
-            );
+            const query = val.toLowerCase();
+            const filtered = allRecords.filter(r => {
+                const pId = String(r.patientId || r["Patient_ID"] || "").toLowerCase();
+                const pName = String(r.childName || r["Child_Name"] || "").toLowerCase();
+                return pId.includes(query) || pName.includes(query);
+            });
 
             // Uniquify suggestions by patientId
             const unique = [];
             const seen = new Set();
             for (const record of filtered) {
-                if (record.patientId && !seen.has(record.patientId)) {
-                    seen.add(record.patientId);
+                const id = record.patientId || record["Patient_ID"];
+                if (id && !seen.has(id)) {
+                    seen.add(id);
                     unique.push(record);
                 }
             }
@@ -98,11 +102,11 @@ const ChildInfo = ({ onNext }) => {
     };
 
     const selectPatient = (patient) => {
-        updateInfo('patientId', patient.patientId);
-        updateInfo('childName', patient.childName);
-        updateInfo('dob', patient.dob);
-        updateInfo('age', patient.age);
-        updateInfo('gender', patient.gender);
+        updateInfo('patientId', patient.patientId || patient["Patient_ID"]);
+        updateInfo('childName', patient.childName || patient["Child_Name"]);
+        updateInfo('dob', patient.dob || patient["DOB"]);
+        updateInfo('age', patient.age || patient["Age"]);
+        updateInfo('gender', patient.gender || patient["Gender"]);
         setSuggestions([]);
         setSearchTerm("");
     };
@@ -121,7 +125,7 @@ const ChildInfo = ({ onNext }) => {
         if (isNewPatient) {
             setLoading(true);
             const freshData = await fetchAssessments(true);
-            const idExists = freshData.some(r => r.patientId === state.patientId);
+            const idExists = freshData.some(r => (r.patientId || r["Patient_ID"]) === state.patientId);
 
             if (idExists) {
                 const trulyNextId = generateNextId(freshData);
@@ -222,7 +226,7 @@ const ChildInfo = ({ onNext }) => {
                                     onMouseOver={(e) => e.target.style.backgroundColor = '#f8f9fa'}
                                     onMouseOut={(e) => e.target.style.backgroundColor = 'white'}
                                 >
-                                    <strong>{p.patientId}</strong> - {p.childName}
+                                    <strong>{p.patientId || p["Patient_ID"]}</strong> - {p.childName || p["Child_Name"]}
                                 </div>
                             ))}
                         </div>
