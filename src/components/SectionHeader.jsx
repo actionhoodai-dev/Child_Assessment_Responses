@@ -1,17 +1,24 @@
 const SectionHeader = ({ title, description }) => {
     return (
-        <div style={{
-            position: 'sticky',
-            top: 0,
-            backgroundColor: 'var(--color-surface)',
-            paddingBottom: '16px',
-            paddingTop: '16px',
-            borderBottom: '1px solid var(--color-border)',
-            marginBottom: '24px',
-            zIndex: 10
-        }}>
-            <h2 style={{ margin: 0, color: 'var(--color-text)' }}>{title}</h2>
-            {description && <p style={{ margin: '4px 0 0', color: 'var(--color-text-muted)' }}>{description}</p>}
+        <div style={{ marginBottom: '32px', borderLeft: '4px solid var(--color-primary)', paddingLeft: '16px' }}>
+            <h2 style={{
+                margin: '0 0 8px 0',
+                color: 'var(--color-primary)',
+                fontSize: '24px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+            }}>
+                {title}
+            </h2>
+            {description && (
+                <p style={{
+                    color: 'var(--color-text-muted)',
+                    fontSize: '18px',
+                    margin: 0
+                }}>
+                    {description}
+                </p>
+            )}
         </div>
     );
 };

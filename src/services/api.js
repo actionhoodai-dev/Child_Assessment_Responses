@@ -1,4 +1,4 @@
-export const API_URL = "https://script.google.com/macros/s/AKfycbwxIk745m--jLzn7f20ykKqS0OtGjlPQqY0JJyM-0SlJ6IU69kROB0vjo0MaA6cN2m8xw/exec";
+export const API_URL = "https://script.google.com/macros/s/AKfycbznu6wWbtTqlPbBLvF8jBLbA-7aEmVv3fHVDNISl38tKHibVUkGKtwvEEvU2kX0sCHZ7g/exec";
 
 /**
  * Submits the assessment data to the backend.
@@ -30,5 +30,41 @@ export const saveAssessment = async (data) => {
     } catch (error) {
         console.error("Submission failed:", error);
         throw error;
+    }
+};
+
+let assessmentsCache = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Fetches all assessments from Google Sheets.
+ * @returns {Promise<Array>} - List of assessment records.
+ */
+export const fetchAssessments = async () => {
+    const now = Date.now();
+    if (assessmentsCache && (now - lastFetchTime < CACHE_DURATION)) {
+        return assessmentsCache;
+    }
+
+    try {
+        const response = await fetch(API_URL, {
+            method: "GET",
+        });
+
+        if (!response.ok) {
+            throw new Error(`Server responded with ${response.status}`);
+        }
+
+        const result = await response.json();
+        const data = Array.isArray(result) ? result : (result.data || []);
+
+        assessmentsCache = data;
+        lastFetchTime = now;
+
+        return data;
+    } catch (error) {
+        console.error("Fetch failed:", error);
+        return assessmentsCache || []; // Return cache if available, else empty
     }
 };

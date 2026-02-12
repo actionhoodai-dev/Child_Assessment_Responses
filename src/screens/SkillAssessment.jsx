@@ -130,21 +130,46 @@ const SkillAssessment = ({ category, onNext, onBack }) => {
 
     const handleUpdate = (skillKey, field, value) => {
         updateSkill(category, skillKey, field, value);
+
+        // Auto-focus logic: If setting a value (not comment), move to next
+        if (field === 'value' && value) {
+            const keys = Object.keys(screenData.items);
+            const currentIndex = keys.indexOf(skillKey);
+            if (currentIndex < keys.length - 1) {
+                const nextKey = keys[currentIndex + 1];
+                const nextElementId = `toggle-${screenData.items[nextKey].replace(/\s+/g, '-').toLowerCase()}`;
+
+                // Small timeout to allow render to complete
+                setTimeout(() => {
+                    const nextElement = document.getElementById(nextElementId);
+                    if (nextElement) {
+                        // Find the first button inside the toggle group
+                        const firstButton = nextElement.querySelector('button');
+                        if (firstButton) {
+                            firstButton.focus();
+                            firstButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+                }, 100);
+            }
+        }
     };
 
     return (
         <div>
             <SectionHeader title={screenData.title} description={screenData.description} />
 
-            {Object.entries(screenData.items).map(([key, label]) => (
-                <SkillRow
-                    key={key}
-                    label={label}
-                    value={currentSkills[key].value}
-                    comment={currentSkills[key].comment}
-                    onUpdate={(field, val) => handleUpdate(key, field, val)}
-                />
-            ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                {Object.entries(screenData.items).map(([key, label]) => (
+                    <SkillRow
+                        key={key}
+                        label={label}
+                        value={currentSkills[key].value}
+                        comment={currentSkills[key].comment}
+                        onUpdate={(field, val) => handleUpdate(key, field, val)}
+                    />
+                ))}
+            </div>
 
             <div style={{ display: 'flex', gap: '16px', marginTop: '32px', marginBottom: '48px' }}>
                 <div style={{ flex: 1 }}>
@@ -154,15 +179,22 @@ const SkillAssessment = ({ category, onNext, onBack }) => {
                 </div>
                 <div style={{ flex: 2 }}>
                     <Button onClick={onNext} disabled={!isComplete}>
-                        Next
+                        Next Section
                     </Button>
                 </div>
             </div>
 
             {!isComplete && (
-                <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '14px' }}>
-                    Please complete all items to proceed.
-                </p>
+                <div style={{
+                    textAlign: 'center',
+                    color: 'var(--color-primary-dark)',
+                    backgroundColor: 'var(--color-secondary)',
+                    padding: '12px',
+                    borderRadius: 'var(--radius-md)',
+                    fontWeight: '500'
+                }}>
+                    Please complete all {screenData.items.length} items to proceed.
+                </div>
             )}
         </div>
     );

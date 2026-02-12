@@ -4,9 +4,11 @@ import Stepper from './components/Stepper';
 import ChildInfo from './screens/ChildInfo';
 import SkillAssessment from './screens/SkillAssessment';
 import Review from './screens/Review';
+import PatientDashboard from './screens/PatientDashboard';
 
 function AppContent() {
   const [currentStep, setCurrentStep] = useState(1);
+  const [viewMode, setViewMode] = useState('assessment'); // 'assessment' or 'dashboard'
   const totalSteps = 9;
 
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, totalSteps));
@@ -30,6 +32,10 @@ function AppContent() {
   };
 
   const renderScreen = () => {
+    if (viewMode === 'dashboard') {
+      return <PatientDashboard onBack={() => setViewMode('assessment')} />;
+    }
+
     switch (currentStep) {
       case 1:
         return <ChildInfo onNext={nextStep} />;
@@ -56,13 +62,29 @@ function AppContent() {
 
   return (
     <div className="container">
-      <header style={{ marginBottom: '32px', textAlign: 'center' }}>
-        <h1 style={{ margin: '0 0 8px 0', fontSize: '28px' }}>Child Assessment</h1>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '18px' }}>Entry Level Scale</p>
+      <header className="assessment-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1>SRI SARASWATHI VIDHYALAYA</h1>
+          <p>Inclusive Education Entry Level Assessment Form</p>
+        </div>
+        <button
+          onClick={() => setViewMode(viewMode === 'assessment' ? 'dashboard' : 'assessment')}
+          style={{
+            padding: '10px 20px',
+            borderRadius: '8px',
+            border: 'none',
+            backgroundColor: viewMode === 'assessment' ? 'var(--color-primary)' : 'var(--color-secondary)',
+            color: 'white',
+            fontWeight: '600',
+            cursor: 'pointer'
+          }}
+        >
+          {viewMode === 'assessment' ? 'View Patient History' : 'New Assessment'}
+        </button>
       </header>
 
       <main className="card">
-        {currentStep <= totalSteps && (
+        {viewMode === 'assessment' && currentStep <= totalSteps && (
           <Stepper currentStep={currentStep} totalSteps={totalSteps} />
         )}
         {renderScreen()}

@@ -1,48 +1,46 @@
 import { useState } from 'react';
+import ToggleSwitch from './ToggleSwitch';
 
 const SkillRow = ({ label, value, comment, onUpdate }) => {
     const [showComment, setShowComment] = useState(false || !!comment);
 
-    const toggleStyle = (isActive) => ({
-        flex: 1,
-        padding: '12px',
-        fontSize: '18px',
-        fontWeight: '600',
-        border: '2px solid',
-        borderColor: isActive ? 'var(--color-primary)' : 'var(--color-border)',
-        backgroundColor: isActive ? 'var(--color-primary)' : '#fff',
-        color: isActive ? '#fff' : 'var(--color-text)',
-        cursor: 'pointer',
-        textAlign: 'center',
-        transition: 'all 0.2s'
-    });
-
     return (
-        <div style={{ marginBottom: '32px', paddingBottom: '24px', borderBottom: '1px solid var(--color-border)' }}>
-            <div style={{ marginBottom: '16px', fontSize: '20px', fontWeight: '500' }}>
-                {label}
+        <div style={{
+            marginBottom: '24px',
+            padding: '24px',
+            borderBottom: '1px solid var(--color-border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            backgroundColor: '#ffffff' // Ensure it stands out against potentially grey bg
+        }}>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '24px',
+                flexWrap: 'wrap'
+            }}>
+                <div style={{
+                    flex: '1 1 300px',
+                    fontSize: '20px',
+                    fontWeight: '500',
+                    lineHeight: '1.4',
+                    color: 'var(--color-text)'
+                }}>
+                    {label}
+                </div>
+
+                <div style={{ flex: '0 0 auto', minWidth: '200px' }}>
+                    <ToggleSwitch
+                        value={value}
+                        onChange={(val) => onUpdate('value', val)}
+                        id={`toggle-${label.replace(/\s+/g, '-').toLowerCase()}`}
+                    />
+                </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
-                <button
-                    type="button"
-                    onClick={() => onUpdate('value', 'Yes')}
-                    style={{ ...toggleStyle(value === 'Yes'), borderTopLeftRadius: '8px', borderBottomLeftRadius: '8px' }}
-                    aria-pressed={value === 'Yes'}
-                >
-                    Yes
-                </button>
-                <button
-                    type="button"
-                    onClick={() => onUpdate('value', 'No')}
-                    style={{ ...toggleStyle(value === 'No'), borderTopRightRadius: '8px', borderBottomRightRadius: '8px' }}
-                    aria-pressed={value === 'No'}
-                >
-                    No
-                </button>
-            </div>
-
-            <div>
+            <div style={{ textAlign: 'right' }}>
                 <button
                     type="button"
                     onClick={() => setShowComment(!showComment)}
@@ -50,30 +48,35 @@ const SkillRow = ({ label, value, comment, onUpdate }) => {
                         background: 'none',
                         border: 'none',
                         color: 'var(--color-primary)',
-                        textDecoration: 'underline',
-                        fontSize: '16px',
-                        marginBottom: '8px',
+                        textDecoration: 'none',
+                        fontSize: '15px',
+                        fontWeight: '600',
                         cursor: 'pointer',
-                        padding: 0
+                        padding: '8px 0',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
                     }}
                 >
-                    {showComment ? '- Hide Comment' : '+ Add Comment (Optional)'}
+                    {showComment ? 'Hide Comment' : 'Add Note / Observation'}
+                    <span style={{ fontSize: '12px' }}>{showComment ? '▲' : '▼'}</span>
                 </button>
 
                 {showComment && (
                     <textarea
                         value={comment || ''}
                         onChange={(e) => onUpdate('comment', e.target.value)}
-                        placeholder="Add observations..."
-                        rows={2}
+                        placeholder="Add specific observations..."
+                        rows={3}
                         style={{
                             width: '100%',
                             padding: '12px',
                             fontSize: '16px',
-                            borderRadius: '8px',
-                            border: '2px solid var(--color-border)',
+                            borderRadius: 'var(--radius-sm)',
+                            border: '1px solid var(--color-border)',
                             marginTop: '8px',
-                            resize: 'vertical'
+                            resize: 'vertical',
+                            fontFamily: 'inherit'
                         }}
                     />
                 )}

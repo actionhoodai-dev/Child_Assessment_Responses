@@ -75,6 +75,7 @@ const Review = ({ onBack, onJumpToStep }) => {
 
             <ReviewSection title="Child Information" onEdit={() => onJumpToStep('info')}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div><strong>Patient ID:</strong> {state.patientId}</div>
                     <div><strong>Name:</strong> {state.childName}</div>
                     <div><strong>Age:</strong> {state.age}</div>
                     <div><strong>DOB:</strong> {state.dob}</div>

@@ -6,6 +6,7 @@ const initialSkillState = { value: "", comment: "" };
 
 const initialState = {
     // Screen 1: Child Information
+    patientId: "",
     childName: "",
     dob: "",
     age: "",

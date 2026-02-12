@@ -10,7 +10,7 @@ const ChildInfo = ({ onNext }) => {
         updateInfo(e.target.name, e.target.value);
     };
 
-    const isValid = state.childName && state.dob && state.age && state.gender && state.assessorName;
+    const isValid = state.patientId && state.childName && state.dob && state.age && state.gender && state.assessorName;
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -22,6 +22,15 @@ const ChildInfo = ({ onNext }) => {
             <SectionHeader
                 title="Child Information"
                 description="Please provide details about the child and assessment session."
+            />
+
+            <Input
+                label="Patient ID"
+                name="patientId"
+                value={state.patientId}
+                onChange={handleChange}
+                placeholder="Unique Patient Identifier"
+                required
             />
 
             <Input
