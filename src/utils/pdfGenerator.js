@@ -1,5 +1,22 @@
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
+
+// Apply the autoTable plugin
+// Note: In newer versions, sometimes just importing is enough, but explicitly assigning it ensures compatibility
+// However, the standard usage with named jsPDF import often requires:
+// autoTable(doc); or just importing autoTable which might auto-register if passed the class.
+// A common reliable way in Vite/ESM:
+// import jsPDF from 'jspdf'
+// import autoTable from 'jspdf-autotable'
+// autoTable(doc) -- functionality is added to prototype usually.
+
+// Let's try the most robust way for recent versions:
+// autoTable(doc) isn't the API, it attaches to jsPDF.API.
+// BUT, often `import 'jspdf-autotable'` is enough if global `jsPDF` exists, which it doesn't here.
+// Let's use the explicit call if available, or just rely on side-effect with correct import.
+
+// Correct approach for typical Vite + jspdf + jspdf-autotable setup:
+
 
 export const generatePDF = (assessmentData) => {
     const doc = new jsPDF();
@@ -39,7 +56,7 @@ export const generatePDF = (assessmentData) => {
         ["Assessor Name", assessmentData.assessorName]
     ];
 
-    doc.autoTable({
+    autoTable(doc, {
         startY: currentY,
         head: [['Field', 'Value']],
         body: childInfo,
@@ -81,7 +98,7 @@ export const generatePDF = (assessmentData) => {
             return [label, data.value, data.comment || '-'];
         });
 
-        doc.autoTable({
+        autoTable(doc, {
             startY: currentY,
             head: [['Skill', 'Response', 'Comment']],
             body: tableBody,
