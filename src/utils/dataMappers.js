@@ -30,38 +30,67 @@ export const mapRecordToAssessmentState = (record) => {
         return "";
     };
 
+    // Category aliases for broader matching
+    const categoryAliases = {
+        gross: ["gross", "grossmotor", "gross_motor", "gm"],
+        fine: ["fine", "finemotor", "fine_motor", "fm"],
+        language: ["language", "lang", "communication_language"],
+        communication: ["communication", "comm", "communication_skills"],
+        social: ["social", "social_interaction", "socialinteraction", "interaction"],
+        adl: ["adl", "activities_of_daily_living", "daily_living", "activitiesofdailyliving"],
+        cognitive: ["cognitive", "cog", "cognitive_skills"]
+    };
+
     // Helper to specific skill value
     const findSkillValue = (category, skill, suffix = "") => {
-        // Construct potential search terms
-        // We look for:
-        // 1. category_skill_suffix
-        // 2. skill_suffix (if unique)
-        // 3. category_skill (if suffix is value or empty)
-
-        const catStart = category.toLowerCase();
         const skillName = skill.toLowerCase();
-        const sfx = suffix.toLowerCase();
+        // Break camelCase skill name for spaced variations (e.g., buildsTower -> builds tower)
+        const unCameledSkill = skill.replace(/([A-Z])/g, ' $1').trim().toLowerCase();
 
+        const sfx = suffix.toLowerCase();
         const searchTerms = [];
 
+        // Get all aliases for the category
+        const catPrefixes = categoryAliases[category] || [category];
+
+        catPrefixes.forEach(cat => {
+            const catStart = cat.toLowerCase();
+
+            if (sfx === "value" || sfx === "") {
+                // Category + Skill variations
+                searchTerms.push(`${catStart}_${skillName}_value`);
+                searchTerms.push(`${catStart}${skillName}value`);
+
+                searchTerms.push(`${catStart}_${skillName}`);
+                searchTerms.push(`${catStart}${skillName}`);
+
+                // Category + Spaced Skill variations (e.g. fine motor builds tower)
+                searchTerms.push(`${catStart}_${unCameledSkill}`);
+                searchTerms.push(`${catStart} ${unCameledSkill}`);
+            } else {
+                searchTerms.push(`${catStart}_${skillName}_${sfx}`);
+                searchTerms.push(`${catStart}${skillName}${sfx}`);
+            }
+        });
+
+        // Global fallbacks (no category prefix)
         if (sfx === "value" || sfx === "") {
-            // Priority 1: Full path with value
-            searchTerms.push(`${catStart}_${skillName}_value`);
-            searchTerms.push(`${category}${skill}Value`); // camelCase variation
-
-            // Priority 2: Full path without value
-            searchTerms.push(`${catStart}_${skillName}`);
-            searchTerms.push(`${category}${skill}`);
-
-            // Priority 3: Just skill name (dangerous but valid fallback)
             searchTerms.push(skillName);
+            searchTerms.push(unCameledSkill);
+
+            // Try matching "Skill Name value"
+            searchTerms.push(`${skillName}value`);
+            searchTerms.push(`${unCameledSkill} value`);
         } else {
-            // For comments, etc.
-            searchTerms.push(`${catStart}_${skillName}_${sfx}`);
-            searchTerms.push(`${category}${skill}${suffix}`);
+            searchTerms.push(`${skillName}_${sfx}`);
+            searchTerms.push(`${skillName}${sfx}`);
         }
 
-        return fuzzyFind(searchTerms);
+        const found = fuzzyFind(searchTerms);
+        if (!found && (sfx === "value" || sfx === "")) {
+            // console.warn(`Could not find value for ${category}.${skill}. Tried:`, searchTerms);
+        }
+        return found;
     };
 
     // Initialize with basic info
