@@ -7,10 +7,11 @@ export const mapRecordToAssessmentState = (record) => {
     if (!record) return null;
 
     // Create a normalized map of the record keys for fuzzy matching
-    // Key: stripped lowercase key (no _, no spaces), Value: original key
+    // Key: stripped lowercase alphanumeric key, Value: original key
     const normalizedKeys = {};
     Object.keys(record).forEach(key => {
-        const stripped = key.toLowerCase().replace(/[\s_]/g, '');
+        // Aggressively remove all non-alphanumeric characters
+        const stripped = key.toLowerCase().replace(/[^a-z0-9]/g, '');
         normalizedKeys[stripped] = key;
     });
 
@@ -18,27 +19,42 @@ export const mapRecordToAssessmentState = (record) => {
     const fuzzyFind = (searchTerms) => {
         for (const term of searchTerms) {
             // 1. Direct lookup
-            if (record[term] !== undefined && record[term] !== "") return record[term];
+            if (record[term] !== undefined && record[term] !== "") {
+                return normalizeValue(record[term]);
+            }
 
-            // 2. Check localized/stripped keys
-            const strippedTerm = term.toLowerCase().replace(/[\s_]/g, '');
+            // 2. Check localized/stripped alphanumeric keys
+            const strippedTerm = term.toLowerCase().replace(/[^a-z0-9]/g, '');
             if (normalizedKeys[strippedTerm]) {
                 const val = record[normalizedKeys[strippedTerm]];
-                if (val !== undefined && val !== "") return val;
+                if (val !== undefined && val !== "") return normalizeValue(val);
             }
         }
         return "";
     };
 
+    // Normalize values like true/false/1/0 to Yes/No
+    const normalizeValue = (val) => {
+        if (typeof val === 'boolean') return val ? "Yes" : "No";
+        if (val === 1 || val === "1") return "Yes";
+        if (val === 0 || val === "0") return "No";
+        if (typeof val === 'string') {
+            const lowVal = val.trim().toLowerCase();
+            if (lowVal === 'true') return "Yes";
+            if (lowVal === 'false') return "No";
+        }
+        return val;
+    };
+
     // Category aliases for broader matching
     const categoryAliases = {
-        gross: ["gross", "grossmotor", "gross_motor", "gm"],
-        fine: ["fine", "finemotor", "fine_motor", "fm"],
-        language: ["language", "lang", "communication_language"],
+        gross: ["gross", "grossmotor", "gross_motor", "gm", "gross_motor_skills"],
+        fine: ["fine", "finemotor", "fine_motor", "fm", "fine_motor_skills"],
+        language: ["language", "lang", "communication_language", "language_skills"],
         communication: ["communication", "comm", "communication_skills"],
-        social: ["social", "social_interaction", "socialinteraction", "interaction"],
-        adl: ["adl", "activities_of_daily_living", "daily_living", "activitiesofdailyliving"],
-        cognitive: ["cognitive", "cog", "cognitive_skills"]
+        social: ["social", "social_interaction", "socialinteraction", "interaction", "social_skills"],
+        adl: ["adl", "activities_of_daily_living", "daily_living", "activitiesofdailyliving", "adl_skills", "self_care"],
+        cognitive: ["cognitive", "cog", "cognitive_skills", "cognitive_skill"]
     };
 
     // Helper to specific skill value
@@ -67,9 +83,18 @@ export const mapRecordToAssessmentState = (record) => {
                 // Category + Spaced Skill variations (e.g. fine motor builds tower)
                 searchTerms.push(`${catStart}_${unCameledSkill}`);
                 searchTerms.push(`${catStart} ${unCameledSkill}`);
+                searchTerms.push(`${catStart}${unCameledSkill}`); // stripped space
+
+                // Add common suffixes found in Form exports
+                searchTerms.push(`${catStart}${skillName}response`);
+                searchTerms.push(`${catStart}${unCameledSkill}response`);
+                searchTerms.push(`${catStart}${skillName}yesno`);
+                searchTerms.push(`${catStart}${unCameledSkill}yesno`);
             } else {
                 searchTerms.push(`${catStart}_${skillName}_${sfx}`);
                 searchTerms.push(`${catStart}${skillName}${sfx}`);
+                searchTerms.push(`${catStart}_${unCameledSkill}_${sfx}`);
+                searchTerms.push(`${catStart} ${unCameledSkill} ${sfx}`);
             }
         });
 
@@ -81,9 +106,14 @@ export const mapRecordToAssessmentState = (record) => {
             // Try matching "Skill Name value"
             searchTerms.push(`${skillName}value`);
             searchTerms.push(`${unCameledSkill} value`);
+            searchTerms.push(`${unCameledSkill}value`);
+            searchTerms.push(`${skillName}response`);
+            searchTerms.push(`${unCameledSkill}response`);
         } else {
             searchTerms.push(`${skillName}_${sfx}`);
             searchTerms.push(`${skillName}${sfx}`);
+            searchTerms.push(`${unCameledSkill}_${sfx}`);
+            searchTerms.push(`${unCameledSkill} ${sfx}`);
         }
 
         const found = fuzzyFind(searchTerms);
