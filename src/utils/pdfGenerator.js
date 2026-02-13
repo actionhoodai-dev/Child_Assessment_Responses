@@ -47,13 +47,13 @@ export const generatePDF = (assessmentData) => {
     currentY += 10;
 
     const childInfo = [
-        ["Patient ID", assessmentData.patientId],
-        ["Child Name", assessmentData.childName],
-        ["Date of Birth", assessmentData.dob],
-        ["Age", assessmentData.age],
-        ["Gender", assessmentData.gender],
-        ["Assessment Date", assessmentData.assessmentDate],
-        ["Assessor Name", assessmentData.assessorName]
+        ["Patient ID", assessmentData.patientId || "-"],
+        ["Child Name", assessmentData.childName || "-"],
+        ["Date of Birth", assessmentData.dob || "-"],
+        ["Age", assessmentData.age || "-"],
+        ["Gender", assessmentData.gender || "-"],
+        ["Assessment Date", assessmentData.assessmentDate || "-"],
+        ["Assessor Name", assessmentData.assessorName || "-"]
     ];
 
     autoTable(doc, {
