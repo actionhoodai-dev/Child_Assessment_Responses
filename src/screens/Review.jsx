@@ -39,6 +39,15 @@ const Review = ({ onBack, onJumpToStep }) => {
         }
     };
 
+    const handleDownload = () => {
+        try {
+            generatePDF(state);
+        } catch (err) {
+            console.error("PDF Fail:", err);
+            alert("Could not generate PDF. Please try again.");
+        }
+    };
+
     if (isSuccess) {
         return (
             <div style={{ textAlign: 'center', padding: '48px 16px' }}>
@@ -46,7 +55,7 @@ const Review = ({ onBack, onJumpToStep }) => {
                 <h2 style={{ color: 'var(--color-success)' }}>Assessment Saved!</h2>
                 <p style={{ marginBottom: '32px' }}>The assessment for <strong>{state.childName}</strong> has been successfully recorded.</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '300px', margin: '0 auto' }}>
-                    <Button onClick={() => generatePDF(state)} variant="success">
+                    <Button onClick={handleDownload} variant="success">
                         Download PDF Report
                     </Button>
                     <Button onClick={() => { window.location.reload(); }} variant="secondary">

@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { fetchAssessments } from '../services/api';
 import Button from '../components/Button';
 import SectionHeader from '../components/SectionHeader';
+import { generatePDF } from '../utils/pdfGenerator';
+import { mapRecordToAssessmentState } from '../utils/dataMappers';
 
 const PatientDashboard = ({ onBack }) => {
     const [allRecords, setAllRecords] = useState([]);
@@ -121,6 +123,16 @@ const PatientDashboard = ({ onBack }) => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+    const handleDownloadPDF = (record) => {
+        try {
+            const nestedState = mapRecordToAssessmentState(record);
+            generatePDF(nestedState);
+        } catch (err) {
+            console.error("PDF Generation failed:", err);
+            alert("Failed to generate PDF for this record.");
+        }
     };
 
     return (
@@ -283,6 +295,7 @@ const PatientDashboard = ({ onBack }) => {
                                     <th style={{ padding: '20px', textAlign: 'left' }}>Clinician</th>
                                     <th style={{ padding: '20px', textAlign: 'center' }}>Score</th>
                                     <th style={{ padding: '20px', textAlign: 'right' }}>Performance Change</th>
+                                    <th style={{ padding: '20px', textAlign: 'center' }}>Report</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -326,6 +339,23 @@ const PatientDashboard = ({ onBack }) => {
                                                 ) : (
                                                     <span style={{ color: '#9e9e9e', fontStyle: 'italic' }}>Baseline</span>
                                                 )}
+                                            </td>
+                                            <td style={{ padding: '20px', textAlign: 'center' }}>
+                                                <button
+                                                    onClick={() => handleDownloadPDF(r)}
+                                                    style={{
+                                                        padding: '8px 16px',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid var(--color-primary)',
+                                                        backgroundColor: '#e0f2f1',
+                                                        color: 'var(--color-primary)',
+                                                        cursor: 'pointer',
+                                                        fontWeight: '600',
+                                                        fontSize: '13px'
+                                                    }}
+                                                >
+                                                    Download PDF
+                                                </button>
                                             </td>
                                         </tr>
                                     );
