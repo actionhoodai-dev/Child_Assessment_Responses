@@ -15,21 +15,61 @@ export const mapRecordToAssessmentState = (record) => {
         normalizedKeys[stripped] = key;
     });
 
+    // Helper to calculate string similarity (simple Jaccard index on character pairs)
+    const getSimilarity = (s1, s2) => {
+        const standard = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const n1 = standard(s1);
+        const n2 = standard(s2);
+        if (n1 === n2) return 1.0;
+        if (n1.length === 0 || n2.length === 0) return 0;
+
+        // Basic "contains" or "starts with" check
+        if (n1.includes(n2) || n2.includes(n1)) return 0.9;
+
+        // Count matching characters (rough but effective for typos)
+        let matches = 0;
+        const set1 = new Set(n1.split(''));
+        const set2 = new Set(n2.split(''));
+        const intersection = new Set([...set1].filter(x => set2.has(x)));
+
+        // Jaccard similarity of characters
+        return intersection.size / Math.max(set1.size, set2.size);
+    };
+
     // Helper to find value using fuzzy matching
     const fuzzyFind = (searchTerms) => {
+        // 1. Try Exact Alphanumeric Match (High Confidence)
         for (const term of searchTerms) {
-            // 1. Direct lookup
             if (record[term] !== undefined && record[term] !== "") {
                 return normalizeValue(record[term]);
             }
 
-            // 2. Check localized/stripped alphanumeric keys
             const strippedTerm = term.toLowerCase().replace(/[^a-z0-9]/g, '');
             if (normalizedKeys[strippedTerm]) {
                 const val = record[normalizedKeys[strippedTerm]];
                 if (val !== undefined && val !== "") return normalizeValue(val);
             }
         }
+
+        // 2. Try Closest Match Fallback (Medium Confidence - handles typos/spelling)
+        let bestMatch = { key: null, score: 0 };
+
+        // Loop through each available key in the record
+        Object.keys(record).forEach(originalKey => {
+            // Check similarity against each of our search terms
+            for (const term of searchTerms) {
+                const score = getSimilarity(term, originalKey);
+                if (score > bestMatch.score) {
+                    bestMatch = { key: originalKey, score };
+                }
+            }
+        });
+
+        // Threshold of 0.75 (high enough to avoid false positives, low enough for typos)
+        if (bestMatch.score > 0.75 && record[bestMatch.key] !== "") {
+            return normalizeValue(record[bestMatch.key]);
+        }
+
         return "";
     };
 
