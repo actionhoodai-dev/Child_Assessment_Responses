@@ -1,79 +1,11 @@
 
 /**
  * Maps a flat record (e.g., from Google Sheets) to the nested assessment state structure.
- * This allows the PDF generator to work with historical data.
+ * This is now perfectly aligned with the App Script backend precisely provided by the USER.
  */
 export const mapRecordToAssessmentState = (record) => {
     if (!record) return null;
 
-    // Create a normalized map of the record keys for fuzzy matching
-    // Key: stripped lowercase alphanumeric key, Value: original key
-    const normalizedKeys = {};
-    Object.keys(record).forEach(key => {
-        // Aggressively remove all non-alphanumeric characters
-        const stripped = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-        normalizedKeys[stripped] = key;
-    });
-
-    // Helper to calculate string similarity (simple Jaccard index on character pairs)
-    const getSimilarity = (s1, s2) => {
-        const standard = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const n1 = standard(s1);
-        const n2 = standard(s2);
-        if (n1 === n2) return 1.0;
-        if (n1.length === 0 || n2.length === 0) return 0;
-
-        // Basic "contains" or "starts with" check
-        if (n1.includes(n2) || n2.includes(n1)) return 0.9;
-
-        // Count matching characters (rough but effective for typos)
-        let matches = 0;
-        const set1 = new Set(n1.split(''));
-        const set2 = new Set(n2.split(''));
-        const intersection = new Set([...set1].filter(x => set2.has(x)));
-
-        // Jaccard similarity of characters
-        return intersection.size / Math.max(set1.size, set2.size);
-    };
-
-    // Helper to find value using fuzzy matching
-    const fuzzyFind = (searchTerms) => {
-        // 1. Try Exact Alphanumeric Match (High Confidence)
-        for (const term of searchTerms) {
-            if (record[term] !== undefined && record[term] !== "") {
-                return normalizeValue(record[term]);
-            }
-
-            const strippedTerm = term.toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (normalizedKeys[strippedTerm]) {
-                const val = record[normalizedKeys[strippedTerm]];
-                if (val !== undefined && val !== "") return normalizeValue(val);
-            }
-        }
-
-        // 2. Try Closest Match Fallback (Medium Confidence - handles typos/spelling)
-        let bestMatch = { key: null, score: 0 };
-
-        // Loop through each available key in the record
-        Object.keys(record).forEach(originalKey => {
-            // Check similarity against each of our search terms
-            for (const term of searchTerms) {
-                const score = getSimilarity(term, originalKey);
-                if (score > bestMatch.score) {
-                    bestMatch = { key: originalKey, score };
-                }
-            }
-        });
-
-        // Threshold of 0.75 (high enough to avoid false positives, low enough for typos)
-        if (bestMatch.score > 0.75 && record[bestMatch.key] !== "") {
-            return normalizeValue(record[bestMatch.key]);
-        }
-
-        return "";
-    };
-
-    // Normalize values like true/false/1/0 to Yes/No
     const normalizeValue = (val) => {
         if (typeof val === 'boolean') return val ? "Yes" : "No";
         if (val === 1 || val === "1") return "Yes";
@@ -86,152 +18,148 @@ export const mapRecordToAssessmentState = (record) => {
         return val;
     };
 
-    // Category aliases for broader matching
-    const categoryAliases = {
-        gross: ["gross", "grossmotor", "gross_motor", "gm", "gross_motor_skills"],
-        fine: ["fine", "finemotor", "fine_motor", "fm", "fine_motor_skills"],
-        language: ["language", "lang", "communication_language", "language_skills"],
-        communication: ["communication", "comm", "communication_skills"],
-        social: ["social", "social_interaction", "socialinteraction", "interaction", "social_skills"],
-        adl: ["adl", "activities_of_daily_living", "daily_living", "activitiesofdailyliving", "adl_skills", "self_care"],
-        cognitive: ["cognitive", "cog", "cognitive_skills", "cognitive_skill"]
+    // Alphanumeric map for fallback matching
+    const normalizedKeys = {};
+    Object.keys(record).forEach(key => {
+        const stripped = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+        normalizedKeys[stripped] = key;
+    });
+
+    const findValue = (category, scriptSkill, suffix = "") => {
+        // App Script uses Category_Skill or Category_Skill_Comment
+        const target = suffix ? `${category}_${scriptSkill}_${suffix}` : `${category}_${scriptSkill}`;
+
+        // Try exact match
+        if (record[target] !== undefined && record[target] !== "") return normalizeValue(record[target]);
+
+        // Try fuzzy match on the specific header name
+        const strippedTarget = target.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (normalizedKeys[strippedTarget]) {
+            return normalizeValue(record[normalizedKeys[strippedTarget]]);
+        }
+
+        return "";
     };
 
-    // Helper to specific skill value
-    const findSkillValue = (category, skill, suffix = "") => {
-        const skillName = skill.toLowerCase();
-        // Break camelCase skill name for spaced variations (e.g., buildsTower -> builds tower)
-        const unCameledSkill = skill.replace(/([A-Z])/g, ' $1').trim().toLowerCase();
-
-        const sfx = suffix.toLowerCase();
-        const searchTerms = [];
-
-        // Get all aliases for the category
-        const catPrefixes = categoryAliases[category] || [category];
-
-        catPrefixes.forEach(cat => {
-            const catStart = cat.toLowerCase();
-
-            if (sfx === "value" || sfx === "") {
-                // Category + Skill variations
-                searchTerms.push(`${catStart}_${skillName}_value`);
-                searchTerms.push(`${catStart}${skillName}value`);
-
-                searchTerms.push(`${catStart}_${skillName}`);
-                searchTerms.push(`${catStart}${skillName}`);
-
-                // Category + Spaced Skill variations (e.g. fine motor builds tower)
-                searchTerms.push(`${catStart}_${unCameledSkill}`);
-                searchTerms.push(`${catStart} ${unCameledSkill}`);
-                searchTerms.push(`${catStart}${unCameledSkill}`); // stripped space
-
-                // Add common suffixes found in Form exports
-                searchTerms.push(`${catStart}${skillName}response`);
-                searchTerms.push(`${catStart}${unCameledSkill}response`);
-                searchTerms.push(`${catStart}${skillName}yesno`);
-                searchTerms.push(`${catStart}${unCameledSkill}yesno`);
-            } else {
-                searchTerms.push(`${catStart}_${skillName}_${sfx}`);
-                searchTerms.push(`${catStart}${skillName}${sfx}`);
-                searchTerms.push(`${catStart}_${unCameledSkill}_${sfx}`);
-                searchTerms.push(`${catStart} ${unCameledSkill} ${sfx}`);
-            }
-        });
-
-        // Global fallbacks (no category prefix)
-        if (sfx === "value" || sfx === "") {
-            searchTerms.push(skillName);
-            searchTerms.push(unCameledSkill);
-
-            // Try matching "Skill Name value"
-            searchTerms.push(`${skillName}value`);
-            searchTerms.push(`${unCameledSkill} value`);
-            searchTerms.push(`${unCameledSkill}value`);
-            searchTerms.push(`${skillName}response`);
-            searchTerms.push(`${unCameledSkill}response`);
-        } else {
-            searchTerms.push(`${skillName}_${sfx}`);
-            searchTerms.push(`${skillName}${sfx}`);
-            searchTerms.push(`${unCameledSkill}_${sfx}`);
-            searchTerms.push(`${unCameledSkill} ${sfx}`);
-        }
-
-        const found = fuzzyFind(searchTerms);
-        if (!found && (sfx === "value" || sfx === "")) {
-            // console.warn(`Could not find value for ${category}.${skill}. Tried:`, searchTerms);
-        }
-        return found;
-    };
-
-    // Initialize with basic info
-    // We try multiple variations for date
-    const dateVal = fuzzyFind([
-        "assessmentDate", "Date_of_Assess", "Assessment Date", "Date", "Timestamp", "Submission Date"
-    ]);
-
-    // Ensure valid date string if it's a timestamp or ISO string
-    let formattedDate = dateVal;
-    if (dateVal && !dateVal.includes("-") && !dateVal.includes("/")) {
-        // Try to parse if it looks like a raw date object or irregular string
-        try {
-            const d = new Date(dateVal);
-            if (!isNaN(d.getTime())) {
-                formattedDate = d.toISOString().split('T')[0];
-            }
-        } catch (e) {
-            // keep original if parse fails
-        }
-    }
-
+    // Basic Info Mapping
     const state = {
-        patientId: fuzzyFind(["patientId", "Patient_ID", "Patient ID", "ID"]),
-        childName: fuzzyFind(["childName", "Child_Name", "Child Name", "Name", "Student Name"]),
-        dob: fuzzyFind(["dob", "DOB", "Date of Birth", "Birth Date"]),
-        age: fuzzyFind(["age", "Age"]),
-        gender: fuzzyFind(["gender", "Gender", "Sex"]),
-        assessmentDate: formattedDate,
-        assessorName: fuzzyFind(["assessorName", "Assessor_Name", "Assessor", "Clinician"]),
+        patientId: record.Patient_ID || record["Patient_ID"] || record.patientId || "",
+        childName: record.Child_Name || record["Child_Name"] || record.childName || "",
+        dob: record.DOB || record["DOB"] || record.dob || "",
+        age: record.Age || record["Age"] || record.age || "",
+        gender: record.Gender || record["Gender"] || record.gender || "",
+        assessmentDate: record.Date_of_Assessment || record["Date_of_Assessment"] || record.assessmentDate || record.Date_of_Assess || "",
+        assessorName: record.Assessor_Name || record["Assessor_Name"] || record.assessorName || "",
     };
 
-    // Structure of skills to map
-    const structure = {
-        gross: [
-            "walksIndependently", "runsSteadily", "jumpsForward", "hopsOneFoot", "climbsStairs",
-            "walksBackward", "throwsBall", "catchesBall", "kicksBall", "balancesOneFoot"
-        ],
-        fine: [
-            "holdsPencil", "drawsShapes", "cutsScissors", "completesPuzzles", "stringsBeads",
-            "buildsTower", "opensContainers", "turnsPages", "manipulatesObjects", "foldsPaper"
-        ],
-        language: [
-            "identifiesObjects", "namesColors", "namesBodyParts", "answersWh", "followsTwoStep",
-            "speaksSentences", "tellsStories", "usesPlurals", "understandsOpposites", "singsRhymes"
-        ],
-        communication: [
-            "initiatesConversation", "maintainsEyeContact", "takesTurns", "asksForHelp", "respondsGreetings",
-            "expressesNeeds", "usesFacialExpressions", "usesGestures", "appropriateTone", "pretendPlaySpeech"
-        ],
-        social: [
-            "greetsPeers", "parallelPlay", "sharesMaterials", "takesTurnsGroup", "followsRules",
-            "waitsPatiently", "expressesFeelings", "showsEmpathy", "resolvesConflicts", "joinsGroup"
-        ],
-        adl: [
-            "toileting", "washesHands", "brushesTeeth", "eatsIndependently", "dresses",
-            "wearsShoes", "zipsBag", "opensLunchbox", "packsBag", "recognizesBelongings"
-        ],
-        cognitive: [
-            "identifiesNumbers", "countsObjects", "matchesShapes", "recognizesPatterns", "sameVsDifferent",
-            "sortsObjects", "recallsItems", "completesTasks", "timeConcepts", "taskAttention"
-        ]
+    // Precision Mapping based on USER provided App Script
+    const map = {
+        gross: {
+            walksIndependently: "Walks_Independently",
+            runsSteadily: "Runs_Steadily",
+            jumpsForward: "Jumps_Forward",
+            hopsOneFoot: "Hops_On_One_Foot",
+            climbsStairs: "Climbs_Stairs",
+            walksBackward: "Walks_Backward",
+            throwsBall: "Throws_Ball",
+            catchesBall: "Catches_Ball",
+            kicksBall: "Kicks_Ball",
+            balancesOneFoot: "Balances_On_One_Foot"
+        },
+        fine: {
+            holdsPencil: "Holds_Pencil",
+            drawsShapes: "Draws_Shapes",
+            cutsScissors: "Cuts_With_Scissors",
+            completesPuzzles: "Completes_Puzzles",
+            stringsBeads: "Strings_Beads",
+            buildsTower: "Builds_Block_Tower",
+            opensContainers: "Opens_Containers",
+            turnsPages: "Turns_Pages",
+            manipulatesObjects: "Manipulates_Small_Objects",
+            foldsPaper: "Folds_Paper"
+        },
+        language: {
+            identifiesObjects: "Identifies_Objects",
+            namesColors: "Names_Colors",
+            namesBodyParts: "Names_Body_Parts",
+            answersWh: "Answers_Wh_Questions",
+            followsTwoStep: "Follows_Two_Step",
+            speaksSentences: "Speaks_Sentences",
+            tellsStories: "Tells_Stories",
+            usesPlurals: "Uses_Plurals",
+            understandsOpposites: "Understands_Opposites",
+            singsRhymes: "Sings_Rhymes"
+        },
+        communication: {
+            initiatesConversation: "Initiates_Conversation",
+            maintainsEyeContact: "Maintains_Eye_Contact",
+            takesTurns: "Takes_Turns",
+            asksForHelp: "Asks_For_Help",
+            respondsGreetings: "Responds_To_Greetings",
+            expressesNeeds: "Expresses_Needs",
+            usesFacialExpressions: "Uses_Facial_Expressions",
+            usesGestures: "Uses_Gestures",
+            appropriateTone: "Appropriate_Tone",
+            pretendPlaySpeech: "Pretend_Play_Speech"
+        },
+        social: {
+            greetsPeers: "Greets_Peers",
+            parallelPlay: "Parallel_Play",
+            sharesMaterials: "Shares_Materials",
+            takesTurnsGroup: "Takes_Turns_Group",
+            followsRules: "Follows_Rules",
+            waitsPatiently: "Waits_Patiently",
+            expressesFeelings: "Expresses_Feelings",
+            showsEmpathy: "Shows_Empathy",
+            resolvesConflicts: "Resolves_Conflicts",
+            joinsGroup: "Joins_Group"
+        },
+        adl: {
+            toileting: "Toileting",
+            washesHands: "Washes_Hands",
+            brushesTeeth: "Brushes_Teeth",
+            eatsIndependently: "Eats_Independently",
+            dresses: "Dresses",
+            wearsShoes: "Wears_Shoes",
+            zipsBag: "Zips_Bag",
+            opensLunchbox: "Opens_Lunchbox",
+            packsBag: "Packs_Bag",
+            recognizesBelongings: "Recognizes_Belongings"
+        },
+        cognitive: {
+            identifiesNumbers: "Identifies_Numbers",
+            countsObjects: "Counts_Objects",
+            matchesShapes: "Matches_Shapes",
+            recognizesPatterns: "Recognizes_Patterns",
+            sameVsDifferent: "Same_vs_Different",
+            sortsObjects: "Sorts_Objects",
+            recallsItems: "Recalls_Items",
+            completesTasks: "Completes_Tasks",
+            timeConcepts: "Time_Concepts",
+            taskAttention: "Task_Attention"
+        }
     };
 
-    // Reconstruct nested skills
-    Object.entries(structure).forEach(([category, skills]) => {
+    // Category names used in Script headers
+    const scriptCategories = {
+        gross: "Gross",
+        fine: "Fine",
+        language: "Language",
+        communication: "Communication",
+        social: "Social",
+        adl: "ADL",
+        cognitive: "Cognitive"
+    };
+
+    // Execute precision mapping
+    Object.keys(map).forEach(category => {
         state[category] = {};
-        skills.forEach(skill => {
-            state[category][skill] = {
-                value: findSkillValue(category, skill, "value") || findSkillValue(category, skill, "") || "",
-                comment: findSkillValue(category, skill, "comment") || ""
+        const scriptCat = scriptCategories[category];
+        Object.keys(map[category]).forEach(internalKey => {
+            const scriptSkill = map[category][internalKey];
+            state[category][internalKey] = {
+                value: findValue(scriptCat, scriptSkill, ""),
+                comment: findValue(scriptCat, scriptSkill, "Comment")
             };
         });
     });
