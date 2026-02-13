@@ -25,6 +25,10 @@ const Button = ({ children, onClick, disabled, variant = 'primary', type = 'butt
         danger: {
             backgroundColor: 'var(--color-error)',
             color: '#fff',
+        },
+        success: {
+            backgroundColor: 'var(--color-success)',
+            color: '#fff',
         }
     };
 

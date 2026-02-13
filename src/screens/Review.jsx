@@ -3,6 +3,7 @@ import { useAssessment } from '../context/AssessmentContext';
 import { saveAssessment } from '../services/api';
 import Button from '../components/Button';
 import SectionHeader from '../components/SectionHeader';
+import { generatePDF } from '../utils/pdfGenerator';
 
 const ReviewSection = ({ title, children, onEdit }) => (
     <div style={{ marginBottom: '24px', borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
@@ -44,9 +45,14 @@ const Review = ({ onBack, onJumpToStep }) => {
                 <div style={{ fontSize: '64px', marginBottom: '24px' }}>✅</div>
                 <h2 style={{ color: 'var(--color-success)' }}>Assessment Saved!</h2>
                 <p style={{ marginBottom: '32px' }}>The assessment for <strong>{state.childName}</strong> has been successfully recorded.</p>
-                <Button onClick={() => { window.location.reload(); }}>
-                    Start New Assessment
-                </Button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '300px', margin: '0 auto' }}>
+                    <Button onClick={() => generatePDF(state)} variant="success">
+                        Download PDF Report
+                    </Button>
+                    <Button onClick={() => { window.location.reload(); }} variant="secondary">
+                        Start New Assessment
+                    </Button>
+                </div>
             </div>
         );
     }
