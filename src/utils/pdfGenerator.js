@@ -1,33 +1,10 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-
-// Apply the autoTable plugin
-// Note: In newer versions, sometimes just importing is enough, but explicitly assigning it ensures compatibility
-// However, the standard usage with named jsPDF import often requires:
-// autoTable(doc); or just importing autoTable which might auto-register if passed the class.
-// A common reliable way in Vite/ESM:
-// import jsPDF from 'jspdf'
-// import autoTable from 'jspdf-autotable'
-// autoTable(doc) -- functionality is added to prototype usually.
-
-// Let's try the most robust way for recent versions:
-// autoTable(doc) isn't the API, it attaches to jsPDF.API.
-// BUT, often `import 'jspdf-autotable'` is enough if global `jsPDF` exists, which it doesn't here.
-// Let's use the explicit call if available, or just rely on side-effect with correct import.
-
-// Correct approach for typical Vite + jspdf + jspdf-autotable setup:
-
+import { getLabel } from './labelMapping';
 
 export const generatePDF = (assessmentData) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
-
-    // Helper function to add text
-    const addText = (text, y, fontSize = 12, isBold = false) => {
-        doc.setFontSize(fontSize);
-        doc.setFont(undefined, isBold ? 'bold' : 'normal');
-        doc.text(text, 14, y);
-    };
 
     // Header
     doc.setFontSize(18);
@@ -61,7 +38,7 @@ export const generatePDF = (assessmentData) => {
         head: [['Field', 'Value']],
         body: childInfo,
         theme: 'grid',
-        headStyles: { fillColor: [66, 133, 244] }, // Google Blue-ish color
+        headStyles: { fillColor: [66, 133, 244] },
         styles: { fontSize: 10 },
         columnStyles: { 0: { fontStyle: 'bold', width: 60 } }
     });
@@ -81,7 +58,7 @@ export const generatePDF = (assessmentData) => {
 
     sections.forEach(section => {
         // Check if we need a new page
-        if (currentY > 250) {
+        if (currentY > 230) {
             doc.addPage();
             currentY = 20;
         }
@@ -93,9 +70,7 @@ export const generatePDF = (assessmentData) => {
 
         const categoryData = assessmentData[section.key];
         const tableBody = Object.entries(categoryData).map(([key, data]) => {
-            // Convert camelCase to Title Case
-            const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-            return [label, data.value, data.comment || '-'];
+            return [getLabel(section.key, key), data.value, data.comment || '-'];
         });
 
         autoTable(doc, {
@@ -106,8 +81,8 @@ export const generatePDF = (assessmentData) => {
             headStyles: { fillColor: [100, 100, 100] },
             styles: { fontSize: 10 },
             columnStyles: {
-                0: { width: 80 },
-                1: { width: 30 },
+                0: { width: 85 },
+                1: { width: 25 },
                 2: { width: 70 }
             }
         });
@@ -116,6 +91,7 @@ export const generatePDF = (assessmentData) => {
     });
 
     // Save the PDF
-    const fileName = `Assessment_${assessmentData.childName.replace(/\s+/g, '_')}_${assessmentData.assessmentDate}.pdf`;
+    const safeChildName = (assessmentData.childName || "Assessment").replace(/\s+/g, '_');
+    const fileName = `Assessment_${safeChildName}_${assessmentData.assessmentDate}.pdf`;
     doc.save(fileName);
 };

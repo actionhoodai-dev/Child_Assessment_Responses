@@ -4,6 +4,7 @@ import { saveAssessment } from '../services/api';
 import Button from '../components/Button';
 import SectionHeader from '../components/SectionHeader';
 import { generatePDF } from '../utils/pdfGenerator';
+import { getLabel } from '../utils/labelMapping';
 
 const ReviewSection = ({ title, children, onEdit }) => (
     <div style={{ marginBottom: '24px', borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
@@ -72,8 +73,8 @@ const Review = ({ onBack, onJumpToStep }) => {
             <ReviewSection title={categoryLabel} onEdit={() => onJumpToStep(category)}>
                 <ul style={{ listStyle: 'none', padding: 0 }}>
                     {Object.entries(skills).map(([key, data]) => (
-                        <li key={key} style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: 'var(--color-text-muted)' }}>{key.replace(/([A-Z])/g, ' $1').toLowerCase()}</span>
+                        <li key={key} style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
+                            <span style={{ color: 'var(--color-text-muted)', flex: 1 }}>{getLabel(category, key)}</span>
                             <span style={{ fontWeight: '600', color: data.value === 'Yes' ? 'var(--color-success)' : 'var(--color-error)' }}>
                                 {data.value}
                             </span>
